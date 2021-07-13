@@ -68,7 +68,7 @@ void WeChatRobot::BuildPushEventAndSendWechat(std::string type, std::string id,
   std::string auther = body["user_name"];
   std::string branch = ref[2];
   std::string repository = body["repository"]["name"];
-  std::string url = body["repository"]["url"];
+  std::string url = body["repository"]["homepage"];
   std::vector<std::string> commits;
 
   json msg, markdown;
