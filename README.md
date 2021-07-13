@@ -4,8 +4,9 @@ wechat-webhook is used for gitlab notification to WeChat Work group.
 
 ### useage
 
-1. just start wechat-webhook instance,
-2. gitlab config webhook url
+1. mkdir build && cd build && cmake ..
+2. just start wechat-webhook instance,
+3. gitlab config webhook url
 
 ```shell
 http://<ip>:port/webhook?id=<robot token id>
@@ -14,7 +15,7 @@ http://<ip>:port/webhook?id=<robot token id>
 ### features
 
 - [x] push event
-- [ ] tag event
+- [x] tag event
 - [ ] merge event
 - [ ] branch create/delete event
 

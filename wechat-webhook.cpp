@@ -3,6 +3,7 @@
 #include <sstream>
 #include <vector>
 
+#include "cmdline.h"
 #include "common.h"
 #include "restclient-cpp/restclient.h"
 
@@ -19,8 +20,6 @@ WeChatRobot::WeChatRobot(int port) : _port{port}, _url{kWechatRobotWebhookUrl} {
 }
 
 void WeChatRobot::Run() {
-  // _svr.set_post_routing_handler(
-  //    [](const auto &req, auto &res) { WebhookHandler(req, res); });
   _svr.Post("/webhook", [&](const Request &req, Response &res) {
     WebhookHandler(req, res);
   });
@@ -40,15 +39,17 @@ void WeChatRobot::WebhookHandler(const httplib::Request &req,
     }
   }
   if (!id.empty()) {
-    _logger->info(id);
     json body = json::parse(req.body);
     if (body["object_kind"] == "push") {
-      BuildPushEventAndSendWechat(id, body);
+      BuildPushEventAndSendWechat("push", id, body);
+    } else if (body["object_kind"] == "tag_push") {
+      BuildPushEventAndSendWechat("tag", id, body);
     }
   }
 
   res.set_content("Ok", "text/plain");
 }
+
 std::vector<std::string> WeChatRobot::_split(const std::string &s, char delim) {
   std::stringstream ss(s);
   std::string item;
@@ -61,31 +62,45 @@ std::vector<std::string> WeChatRobot::_split(const std::string &s, char delim) {
   return elems;
 }
 
-void WeChatRobot::BuildPushEventAndSendWechat(std::string id, json body) {
+void WeChatRobot::BuildPushEventAndSendWechat(std::string type, std::string id,
+                                              json body) {
   std::vector<std::string> ref = _split(body["ref"].get<std::string>(), '/');
   std::string auther = body["user_name"];
   std::string branch = ref[2];
   std::string repository = body["repository"]["name"];
+  std::string url = body["repository"]["url"];
   std::vector<std::string> commits;
 
   json msg, markdown;
   std::string content;
 
-  std::string title = fmt::format(
-      "{} push to branch <font color=\"warning\">{}</font> at <font "
-      "color=\"comment\">{}</font>\n",
-      auther, branch, repository);
-  commits.push_back(title);
-  for (unsigned i = 0; i < body["commits"].size(); i++) {
-    std::string commit =
-        fmt::format(">[{}]({}): {}",
-                    body["commits"].at(i)["id"].get<std::string>().substr(0, 6),
-                    body["commits"].at(i)["url"].get<std::string>(),
-                    body["commits"].at(i)["message"].get<std::string>());
-    _logger->info("commit >>> {}", commit);
-    commits.push_back(commit);
+  if (!type.compare("tag")) {
+    std::string action = "add";
+    if (body["ref"].dump().compare(
+            "0000000000000000000000000000000000000000")) {
+      action = "remove";
+    }
+    std::string title = fmt::format(
+        "{} {} tag <font color=\"warning\">{}</font> at <font "
+        "color=\"comment\">[{}]({})</font>\n",
+        auther, action, branch, repository, url);
+    commits.push_back(title);
+  } else if (!type.compare("push")) {
+    std::string title = fmt::format(
+        "{} pushed to branch <font color=\"warning\">{}</font> at <font "
+        "color=\"comment\">[{}]({})</font>\n",
+        auther, branch, repository, url);
+    commits.push_back(title);
+    for (unsigned i = 0; i < body["commits"].size(); i++) {
+      std::string commit = fmt::format(
+          ">[{}]({}): {}",
+          body["commits"].at(i)["id"].get<std::string>().substr(0, 6),
+          body["commits"].at(i)["url"].get<std::string>(),
+          body["commits"].at(i)["message"].get<std::string>());
+      _logger->info("commit >>> {}", commit);
+      commits.push_back(commit);
+    }
   }
-
   for (unsigned i = 0; i < commits.size(); i++) {
     content = content + commits.at(i);
   }
@@ -93,20 +108,6 @@ void WeChatRobot::BuildPushEventAndSendWechat(std::string id, json body) {
   markdown["content"] = content;
   msg["msgtype"] = "markdown";
   msg["markdown"] = markdown;
-  _logger->info("Post>> to {} msg: {}",
-                (kWechatRobotWebhookUrl + "/cgi-bin/webhook/send?key=" + id),
-                msg.dump());
-  /*
-httplib::Client cli(kWechatRobotWebhookUrl.c_str());
-_logger->info("Post to {} msg: {}",
-  (kWechatRobotWebhookUrl + "/cgi-bin/webhook/send?key=" + id),
-  msg.dump());
-
-auto res = cli.Post(
-(kWechatRobotWebhookUrl + "/cgi-bin/webhook/send?key=" + id).c_str(),
-msg.dump(), "application/json");
-_logger->info("{}", res);
-*/
 
   RestClient::Response r = RestClient::post(
       kWechatRobotWebhookUrl + "/cgi-bin/webhook/send?key=" + id,
@@ -114,8 +115,17 @@ _logger->info("{}", res);
   _logger->info("Wechat robot resp code: {} body: {}", r.code, r.body);
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+  cmdline::parser flags;
   int port = 9527;
+  flags.add<int>("port", 'p', "port number", false, 9527,
+                 cmdline::range(1, 65535));
+
+  flags.parse_check(argc, argv);
+
+  if (flags.exist("port")) {
+    port = flags.get<int>("port");
+  }
   WeChatRobot robot(port);
   robot.Run();
   return 0;

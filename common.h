@@ -2,8 +2,8 @@
 #define _COMMON_H
 #include <iostream>
 
-#include "include/httplib.h"
-#include "include/nlohmann/json.hpp"
+#include "httplib.h"
+#include "nlohmann/json.hpp"
 #include "spdlog/sinks/basic_file_sink.h"
 #include "spdlog/spdlog.h"
 using namespace httplib;
@@ -17,7 +17,7 @@ class WeChatRobot : public httplib::Server {
   WeChatRobot(int port);
 
   void WebhookHandler(const Request &req, Response &res);
-  void BuildPushEventAndSendWechat(std::string id, json body);
+  void BuildPushEventAndSendWechat(std::string type, std::string id, json body);
   void Run();
 
  private:
