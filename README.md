@@ -1,8 +1,8 @@
 ## wechat-webhook
 
 wechat-webhook is used for gitlab notification to WeChat Work group.
-
-### useage
+Inspired by dingding gitlab robot.
+### usage
 
 1. mkdir build && cd build && cmake ..
 2. just start wechat-webhook instance,
