@@ -65,8 +65,18 @@ std::vector<std::string> WeChatRobot::_split(const std::string &s, char delim) {
 void WeChatRobot::BuildPushEventAndSendWechat(std::string type, std::string id,
                                               json body) {
   std::vector<std::string> ref = _split(body["ref"].get<std::string>(), '/');
+  std::string branch;
+  if (ref.size() > 2) {
+    ref.erase(ref.begin(), ref.begin() + 2);
+
+    for (std::vector<std::string>::iterator it = ref.begin(); it != ref.end();
+         ++it) {
+      branch = branch + "/" + *it;
+    }
+  }
+
   std::string auther = body["user_name"];
-  std::string branch = ref[2];
+  // std::string branch = ref[2];
   std::string repository = body["repository"]["name"];
   std::string url = body["repository"]["homepage"];
   std::vector<std::string> commits;
