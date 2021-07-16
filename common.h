@@ -16,7 +16,9 @@ class WeChatRobot : public httplib::Server {
  public:
   WeChatRobot(int port);
 
-  void WebhookHandler(const Request &req, Response &res);
+  void GitLabWebhookHandler(const Request &req, Response &res);
+  void GrafanaWebhookHandler(const Request &req, Response &res);
+
   void BuildPushEventAndSendWechat(std::string type, std::string id, json body);
   void Run();
 

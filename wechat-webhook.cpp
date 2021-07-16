@@ -20,15 +20,19 @@ WeChatRobot::WeChatRobot(int port) : _port{port}, _url{kWechatRobotWebhookUrl} {
 }
 
 void WeChatRobot::Run() {
-  _svr.Post("/webhook", [&](const Request &req, Response &res) {
-    WebhookHandler(req, res);
+  _svr.Post("/webhook/gitlab", [&](const Request &req, Response &res) {
+    GitLabWebhookHandler(req, res);
+  });
+  _svr.Post("/webhook/grafana", [&](const Request &req, Response &res) {
+    GrafanaWebhookHandler(req, res);
   });
   _logger->info("wechat-webhook service run at port: {}", _port);
   _svr.listen("0.0.0.0", _port);
 }
-void WeChatRobot::WebhookHandler(const httplib::Request &req,
-                                 httplib::Response &res) {
-  _logger->info("Rcev request >>>>>>>>>> {}", req.body);
+
+void WeChatRobot::GitLabWebhookHandler(const httplib::Request &req,
+                                       httplib::Response &res) {
+  _logger->info("Rcev gitlab request >>>>>>>>>> {}", req.body);
   std::string id;
   char buf[1024];
 
@@ -45,6 +49,33 @@ void WeChatRobot::WebhookHandler(const httplib::Request &req,
     } else if (body["object_kind"] == "tag_push") {
       BuildPushEventAndSendWechat("tag", id, body);
     }
+  }
+
+  res.set_content("Ok", "text/plain");
+}
+
+void WeChatRobot::GrafanaWebhookHandler(const httplib::Request &req,
+                                        httplib::Response &res) {
+  _logger->info("Rcev grafana request >>>>>>>>>> {}", req.body);
+  std::string id;
+  char buf[1024];
+
+  for (auto it = req.params.begin(); it != req.params.end(); ++it) {
+    const auto &x = *it;
+    if (!x.first.compare("id")) {
+      id = x.second;
+    }
+  }
+  if (!id.empty()) {
+    json body = json::parse(req.body);
+    json msg, markdown;
+    markdown["content"] = body["message"];
+    msg["msgtype"] = "markdown";
+    msg["markdown"] = markdown;
+    RestClient::Response r = RestClient::post(
+        kWechatRobotWebhookUrl + "/cgi-bin/webhook/send?key=" + id,
+        "application/json", msg.dump());
+    _logger->info("Wechat robot resp code: {} body: {}", r.code, r.body);
   }
 
   res.set_content("Ok", "text/plain");

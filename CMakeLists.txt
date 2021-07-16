@@ -5,4 +5,4 @@ set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -g -fno-strict-aliasing -O2 -Wall -export-dyn
 set(CMAKE_CXX_STANDARD 11)
 link_directories("/usr/local/lib")
 add_executable(wechat-webhook wechat-webhook.cpp)
-target_link_libraries(wechat-webhook -lfmt -lspdlog -lpthread -lrestclient-cpp)
+target_link_libraries(wechat-webhook -lfmt -lspdlog -lpthread -lrestclient-cpp -lcurl)

@@ -9,7 +9,8 @@ Inspired by dingding gitlab robot.
 3. gitlab config webhook url
 
 ```shell
-http://<ip>:port/webhook?id=<robot token id>
+http://<ip>:port/webhook/gitlab?id=<robot token id>
+http://<ip>:port/webhook/grafana?id=<robot token id>
 ```
 
 ### features
@@ -18,6 +19,7 @@ http://<ip>:port/webhook?id=<robot token id>
 - [x] tag event
 - [ ] merge event
 - [ ] branch create/delete event
+- [x] grafana alert
 
 ### dependency
 
