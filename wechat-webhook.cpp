@@ -13,8 +13,8 @@
 WeChatRobot::WeChatRobot(int port) : _port{port}, _url{kWechatRobotWebhookUrl} {
   auto max_size = 1024 * 1024 * 5;
   auto max_files = 3;
-  _logger =
-      spdlog::basic_logger_mt("wechat-webhook", "logs/wechat-webhook.log");
+  _logger = spdlog::daily_logger_mt("wechat-webhook", "logs/wechat-webhook.log",
+                                    2, 30);
   // spdlog::set_default_logger(_logger);
   spdlog::flush_on(spdlog::level::info);
 }
@@ -116,10 +116,10 @@ void WeChatRobot::BuildPushEventAndSendWechat(std::string type, std::string id,
   std::string content;
 
   if (!type.compare("tag")) {
-    std::string action = "add";
+    std::string action = "remove";
     if (body["ref"].dump().compare(
             "0000000000000000000000000000000000000000")) {
-      action = "remove";
+      action = "add";
     }
     std::string title = fmt::format(
         "{} {} tag <font color=\"warning\">{}</font> at <font "
