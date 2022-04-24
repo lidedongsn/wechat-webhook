@@ -32,7 +32,7 @@ void WeChatRobot::Run() {
 
 void WeChatRobot::GitLabWebhookHandler(const httplib::Request &req,
                                        httplib::Response &res) {
-  _logger->info("Rcev gitlab request >>>>>>>>>> {}", req.body);
+  _logger->info("Recv gitlab request >>>>>>>>>> {}", req.body);
   std::string id;
   char buf[1024];
 
@@ -48,6 +48,8 @@ void WeChatRobot::GitLabWebhookHandler(const httplib::Request &req,
       BuildPushEventAndSendWechat("push", id, body);
     } else if (body["object_kind"] == "tag_push") {
       BuildPushEventAndSendWechat("tag", id, body);
+    } else if (body["object_kind"] == "merge_request") {
+      BuildMergeEventAndSendWechat(id, body);
     }
   }
 
@@ -149,6 +151,46 @@ void WeChatRobot::BuildPushEventAndSendWechat(std::string type, std::string id,
   markdown["content"] = content;
   msg["msgtype"] = "markdown";
   msg["markdown"] = markdown;
+
+  RestClient::Response r = RestClient::post(
+      kWechatRobotWebhookUrl + "/cgi-bin/webhook/send?key=" + id,
+      "application/json", msg.dump());
+  _logger->info("Wechat robot resp code: {} body: {}", r.code, r.body);
+}
+
+void WeChatRobot::BuildMergeEventAndSendWechat(std::string id, json body) {
+  _logger->info(">>>>>>>>>>>>>>>>>>>>>BuildMergeEventAndSendWechat{}",
+                body.dump());
+  std::string auther = body["user"]["name"];
+  std::string source_branch = body["object_attributes"]["source_branch"];
+  std::string target_branch = body["object_attributes"]["target_branch"];
+  std::string title = body["object_attributes"]["title"];
+  std::string description = body["object_attributes"]["description"];
+  int merge_request_id = body["object_attributes"]["iid"];
+
+  std::string repository = body["object_attributes"]["target"]["name"];
+  std::string http_url = body["object_attributes"]["target"]["http_url"];
+  std::string url = body["object_attributes"]["url"];
+
+  std::string action = body["object_attributes"]["action"];
+
+  json msg, markdown;
+
+  std::string content = fmt::format(
+      "{} push new merge request from <font color=\"warning\">{}</font>"
+      " to <font color=\"warning\">{}</font>"
+      " at <font color=\"comment\">[{}]({})</font>\n"
+      "### [MergeRequest#{}]({}): {}\n"
+      ">{}\n"
+      ">Action: <font color=\"info\">{}</font>\n",
+      auther, source_branch, target_branch, repository, http_url,
+      merge_request_id, url, title, description, action);
+
+  markdown["content"] = content;
+  msg["msgtype"] = "markdown";
+  msg["markdown"] = markdown;
+
+  _logger->info(">>>>>>>>>>>", content);
 
   RestClient::Response r = RestClient::post(
       kWechatRobotWebhookUrl + "/cgi-bin/webhook/send?key=" + id,

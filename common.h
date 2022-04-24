@@ -21,6 +21,8 @@ class WeChatRobot : public httplib::Server {
   void GrafanaWebhookHandler(const Request &req, Response &res);
 
   void BuildPushEventAndSendWechat(std::string type, std::string id, json body);
+  void BuildMergeEventAndSendWechat(std::string id, json body);
+
   void Run();
 
  private:

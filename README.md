@@ -17,7 +17,7 @@ http://<ip>:port/webhook/grafana?id=<robot token id>
 
 - [x] push event
 - [x] tag event
-- [ ] merge event
+- [x] merge event
 - [ ] branch create/delete event
 - [x] grafana alert
 
